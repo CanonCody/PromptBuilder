@@ -75,12 +75,17 @@ def clear_template_input():
 def insert_category(category, entry):
     """Insert the selected category into the template input field."""
     current_template = template_var.get()
-    # If there is existing content, append ", " before adding the new category
-    if current_template:
-        updated_template = current_template + f', [{category}]'
-    else:
-        # If there is no existing content, add the new category without ", "
-        updated_template = f'[{category}]'
+    # Append the new category directly without adding ', '
+    updated_template = current_template + f'[{category}]'
+    template_var.set(updated_template)
+    # Set the cursor position to the end of the updated template
+    entry.icursor(tk.END)
+
+def insert_text(text, entry):
+    """Insert the specified text into the template input field."""
+    current_template = template_var.get()
+    # Append the specified text to the existing template
+    updated_template = current_template + text
     template_var.set(updated_template)
     # Set the cursor position to the end of the updated template
     entry.icursor(tk.END)
@@ -113,11 +118,23 @@ def refresh_template_builder():
         widget.destroy()
 
     # Recreate the input field for editing the template
+    total_categories = sum(len(categories) for categories in CATEGORIES_BY_TYPE.values())  # Calculate total_categories here
     template_entry = tk.Entry(tab_template_builder, textvariable=template_var, width=60)
-    template_entry.grid(row=0, column=0, columnspan=max(1, sum(len(categories) for categories in CATEGORIES_BY_TYPE.values())), padx=10, pady=10)
+    template_entry.grid(row=0, column=0, columnspan=max(1, total_categories), padx=10, pady=10)
+
+    # Create a frame for the text buttons
+    text_buttons_frame = tk.Frame(tab_template_builder)
+    text_buttons_frame.grid(row=1, column=0, columnspan=max(1, total_categories), padx=10, pady=5, sticky='w')
+
+    # Create a row of buttons for specific characters and strings
+    text_buttons = [", ", "of", "a", "and"]
+    for col, text in enumerate(text_buttons, start=0):
+        text_button = tk.Button(text_buttons_frame, text=text,
+                                command=lambda t=text, entry=template_entry: insert_text(t, entry))
+        text_button.grid(row=0, column=col, padx=5, pady=5)
 
     # Recreate the buttons for each category type in separate rows
-    row = 1
+    row = 2  # Start placing category buttons from row=2
     for category_type, categories in CATEGORIES_BY_TYPE.items():
         # Create a label to display the category type
         category_type_label = tk.Label(tab_template_builder, text=category_type.capitalize())
@@ -130,7 +147,7 @@ def refresh_template_builder():
 
     # Recreate the "Clear" button to clear the content of the template input field
     clear_button = tk.Button(tab_template_builder, text="Clear", command=clear_template_input)
-    clear_button.grid(row=0, column=max(1, sum(len(categories) for categories in CATEGORIES_BY_TYPE.values())), padx=10, pady=10)
+    clear_button.grid(row=0, column=max(1, total_categories), padx=10, pady=10)
 
 
 def create_template_builder(tab_parent):
@@ -144,6 +161,17 @@ def create_template_builder(tab_parent):
     total_categories = sum(len(categories) for categories in CATEGORIES_BY_TYPE.values())
     template_entry = tk.Entry(tab_template_builder, textvariable=template_var, width=60)
     template_entry.grid(row=0, column=0, columnspan=max(1, total_categories), padx=10, pady=10)
+
+    # Create a frame for the text buttons
+    text_buttons_frame = tk.Frame(tab_template_builder)
+    text_buttons_frame.grid(row=2, column=0, columnspan=max(1, total_categories), padx=10, pady=5, sticky='w')
+
+    # Create a row of buttons for specific characters and strings
+    text_buttons = [", ", "of", "a", "and"]
+    for col, text in enumerate(text_buttons, start=0):
+        text_button = tk.Button(text_buttons_frame, text=text,
+                                command=lambda t=text, entry=template_entry: insert_text(t, entry))
+        text_button.grid(row=0, column=col, padx=5, pady=5)
 
     # Create a "Clear" button to clear the content of the template input field
     clear_button = tk.Button(tab_template_builder, text="Clear", command=clear_template_input)
