@@ -1,0 +1,17 @@
+{
+    "nouns": [
+        "abstract",
+        "animal",
+        "emotion",
+        "food",
+        "location",
+        "nature",
+        "object",
+        "profession"
+    ],
+    "uncategorized": [
+        "adjective",
+        "medium",
+        "style"
+    ]
+}
