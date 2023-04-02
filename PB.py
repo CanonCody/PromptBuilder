@@ -5,14 +5,18 @@ import tkinter as tk
 from tkinter import scrolledtext
 from tkinter import ttk
 
+# Define the name of the subdirectory where JSON files are stored
+JSON_DIR = "categories"
+
 # Initialize CATEGORIES_BY_TYPE as a dictionary with default empty lists
 CATEGORIES_BY_TYPE = {}
 
-
 def load_words(category):
     """Load words from JSON file for the given category."""
+    # Build the file path using the JSON_DIR constant
+    file_path = os.path.join(JSON_DIR, f'{category}.json')
     try:
-        with open(f'{category}.json', 'r') as file:
+        with open(file_path, 'r') as file:
             words = json.load(file)
         return words
     except FileNotFoundError:
@@ -23,8 +27,10 @@ def load_words(category):
 
 def load_category_types():
     """Load category types from JSON file."""
+    # Build the file path using the JSON_DIR constant
+    file_path = os.path.join(JSON_DIR, 'category_types.json')
     try:
-        with open('category_types.json', 'r') as file:
+        with open(file_path, 'r') as file:
             return json.load(file)
     except FileNotFoundError:
         print('Error: Unable to load category types. JSON file not found.')
@@ -120,15 +126,19 @@ def rebuild_categories(refresh=True):
     # Load category types from JSON file and update CATEGORIES_BY_TYPE
     CATEGORIES_BY_TYPE = load_category_types()
     
-    # List all files in the current directory
-    files = os.listdir()
+    # List all files in the JSON_DIR subdirectory
+    files = os.listdir(JSON_DIR)
     
     # Filter for files with the .json extension
     json_files = [file for file in files if file.endswith('.json')]
     
     # Update the CATEGORIES_BY_TYPE dictionary based on available JSON files
     for category_type, categories in CATEGORIES_BY_TYPE.items():
-        CATEGORIES_BY_TYPE[category_type] = [cat for cat in categories if f'{cat}.json' in json_files]
+        # Filter JSON files that belong to the current category type
+        CATEGORIES_BY_TYPE[category_type] = [cat[:-5] for cat in json_files if cat[:-5] in categories and cat != 'category_types.json']
+    
+    # Print the content of the CATEGORIES_BY_TYPE dictionary for debugging
+    print(CATEGORIES_BY_TYPE)
     
     if refresh:
         # Refresh the Template Builder tab to reflect the updated CATEGORIES_BY_TYPE dictionary
