@@ -26,7 +26,7 @@ def load_words(category):
     return []
 
 def load_category_types():
-    """Load category types from JSON file."""
+    """Load category types from JSON file or prompt user for default category types."""
     # Build the file path using the JSON_DIR constant
     file_path = os.path.join(JSON_DIR, 'category_types.json')
     try:
@@ -34,6 +34,14 @@ def load_category_types():
             return json.load(file)
     except FileNotFoundError:
         print('Error: Unable to load category types. JSON file not found.')
+        # Prompt user for default category types
+        default_category_types = input("Enter default category types separated by comma (e.g., uncategorized,nouns): ").strip()
+        # Convert input to dictionary format
+        default_categories_dict = {category_type: [] for category_type in default_category_types.split(',')}
+        # Write the default categories to a new JSON file
+        with open(file_path, 'w') as file:
+            json.dump(default_categories_dict, file, indent=2)
+        return default_categories_dict
     except json.JSONDecodeError as e:
         print(f'Error: Unable to load category types. Invalid JSON. {e}')
     return {'uncategorized': [], 'nouns': []}
@@ -79,6 +87,40 @@ def copy_to_clipboard(event):
     
     # Restore the original text color after a short delay (e.g., 100 ms)
     prompt_label.after(100, lambda: prompt_label.config(fg=original_fg))
+
+def show_category_words(event, category):
+    """Open a new window to display all the words in the selected category."""
+    # Load words for the current category from JSON file
+    words = load_words(category)
+
+    # Sort the words alphabetically
+    words = sorted(words)
+
+    # Create a new window to display the words
+    words_window = tk.Toplevel(root)
+    words_window.title(f"Words in '{category}' category")
+
+    # Create a label to display the words in the new window
+    words_label = tk.Label(words_window, text="\n".join(words), font=("Helvetica", 12))
+    words_label.pack(pady=10)
+
+    # Define the default width and height for the window (in pixels)
+    default_width = 300
+    default_height = 200
+
+    # Set the default geometry of the words_window
+    words_window.geometry(f"{default_width}x{default_height}")
+
+    # Calculate the width of the longest word in pixels
+    max_word_width = max(words_label.winfo_reqwidth() for word in words)
+    # Define the margin space in pixels
+    margin_space = 20
+    # Calculate the total window width
+    words_window_width = max(default_width, max_word_width + margin_space)
+
+    # Update the width of the words_window to the calculated width
+    words_window.geometry(f"{words_window_width}x{words_window.winfo_reqheight()}")
+
 
 def clear_template_input():
     """Clear the content of the template input field."""
@@ -152,7 +194,6 @@ def refresh_template_builder():
     for widget in tab_template_builder.winfo_children():
         widget.destroy()
 
-
     # Total number of categories
     total_categories = sum(len(categories) for categories in CATEGORIES_BY_TYPE.values())
 
@@ -160,16 +201,8 @@ def refresh_template_builder():
     template_entry = scrolledtext.ScrolledText(tab_template_builder, width=75, height=2, wrap=tk.WORD)
     template_entry.grid(row=0, column=0, columnspan=max(1, total_categories), padx=10, pady=10)
 
-    # Create a frame for the text buttons
-    text_buttons_frame = tk.Frame(tab_template_builder)
-    text_buttons_frame.grid(row=2, column=0, columnspan=max(1, total_categories), padx=10, pady=5, sticky='w')
-
-    # Create a row of buttons for specific characters and strings
-    text_buttons = [" ", ", ", "of", "a", "at", "and"]
-    for col, text in enumerate(text_buttons, start=0):
-        text_button = tk.Button(text_buttons_frame, text=text,
-                        command=lambda t=text, entry=template_entry: insert_into_template(t, entry, is_category=False))
-        text_button.grid(row=0, column=col, padx=5, pady=5)
+    # Determine the maximum length of the category names for button size
+    max_length = max(len(category) for categories in CATEGORIES_BY_TYPE.values() for category in categories)
 
     # Recreate the buttons for each category type in separate rows
     row = 3  # Start placing category buttons from row=3
@@ -178,9 +211,11 @@ def refresh_template_builder():
         category_type_label = tk.Label(tab_template_builder, text=category_type.capitalize())
         category_type_label.grid(row=row, column=0, padx=5, pady=5, sticky='w')
         for col, category in enumerate(categories, start=1):
-            category_button = tk.Button(tab_template_builder, text=category,
+            category_button = tk.Button(tab_template_builder, text=category, width=max_length,
                             command=lambda cat=category, entry=template_entry: insert_into_template(cat, entry, is_category=True))
             category_button.grid(row=row, column=col, padx=5, pady=5)
+            # Bind right-click event (Button-3) to show_category_words function
+            category_button.bind("<Button-3>", lambda event, cat=category: show_category_words(event, cat))
         row += 1  # Increment the row for the next category type
 
     # Recreate the "Clear" button to clear the content of the template input field
