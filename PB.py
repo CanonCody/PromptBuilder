@@ -79,22 +79,35 @@ def clear_template_input():
     global template_entry  # Access the global variable
     template_entry.delete("1.0", tk.END)  # Clear the content of the template_entry widget
 
-def insert_category(category, entry):
-    """Insert the selected category into the template input field."""
-    # Get current content and insert the category at the cursor position
-    current_template = entry.get("1.0", tk.END)[:-1]  # Remove the trailing newline character
-    cursor_position_str = entry.index(tk.INSERT)
-    cursor_index = int(entry.index(cursor_position_str).split('.')[1])
-    updated_template = current_template[:cursor_index] + f'[{category}]' + current_template[cursor_index:]
-    entry.delete("1.0", tk.END)
-    entry.insert(tk.END, updated_template)
+def insert_into_template(text, entry, is_category=False):
+    """Insert the specified text or category into the template input field."""
+    def should_add_space(target, index, is_before):
+        """Determine if a space should be added before or after the index."""
+        if not target:  # Empty target
+            return False
+        if is_before:
+            return index > 0 and target[index - 1] not in (' ', '\n')
+        else:
+            return index < len(target) and target[index] not in (' ', '\n')
 
-def insert_text(text, entry):
-    """Insert the specified text into the template input field."""
     # Get current content and insert the text at the cursor position
-    current_template = entry.get("1.0", tk.END)[:-1]  # Remove the trailing newline character
+    current_template = entry.get("1.0", tk.END)[:-1]
     cursor_position_str = entry.index(tk.INSERT)
     cursor_index = int(entry.index(cursor_position_str).split('.')[1])
+    
+    # Wrap category in square brackets if it's a category
+    if is_category:
+        text = f'[{text}]'
+    
+    # Add space before the text if necessary
+    if should_add_space(current_template, cursor_index, is_before=True):
+        text = ' ' + text
+    
+    # Add space after the text if necessary
+    if should_add_space(current_template, cursor_index, is_before=False):
+        text += ' '
+    
+    # Insert the text into the current template
     updated_template = current_template[:cursor_index] + text + current_template[cursor_index:]
     entry.delete("1.0", tk.END)
     entry.insert(tk.END, updated_template)
@@ -145,7 +158,7 @@ def refresh_template_builder():
     text_buttons = [" ", ", ", "of", "a", "at", "and"]
     for col, text in enumerate(text_buttons, start=0):
         text_button = tk.Button(text_buttons_frame, text=text,
-                                command=lambda t=text, entry=template_entry: insert_text(t, entry))
+                        command=lambda t=text, entry=template_entry: insert_into_template(t, entry, is_category=False))
         text_button.grid(row=0, column=col, padx=5, pady=5)
 
     # Recreate the buttons for each category type in separate rows
@@ -156,7 +169,7 @@ def refresh_template_builder():
         category_type_label.grid(row=row, column=0, padx=5, pady=5, sticky='w')
         for col, category in enumerate(categories, start=1):
             category_button = tk.Button(tab_template_builder, text=category,
-                                        command=lambda cat=category, entry=template_entry: insert_category(cat, entry))
+                            command=lambda cat=category, entry=template_entry: insert_into_template(cat, entry, is_category=True))
             category_button.grid(row=row, column=col, padx=5, pady=5)
         row += 1  # Increment the row for the next category type
 
@@ -184,7 +197,7 @@ def create_template_builder(tab_parent):
     text_buttons = [", ", "of", "a", "and"]
     for col, text in enumerate(text_buttons, start=0):
         text_button = tk.Button(text_buttons_frame, text=text,
-                                command=lambda t=text, entry=template_entry: insert_text(t, entry))
+                                command=lambda t=text, entry=template_entry: insert_into_template(t, entry, is_category=False))
         text_button.grid(row=0, column=col, padx=5, pady=5)
 
     # Create a "Clear" button to clear the content of the template input field
