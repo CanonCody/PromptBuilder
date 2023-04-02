@@ -36,8 +36,8 @@ def load_category_types():
         print('Error: Unable to load category types. JSON file not found.')
         # Prompt user for default category types
         default_category_types = input("Enter default category types separated by comma (e.g., uncategorized,nouns): ").strip()
-        # Convert input to dictionary format
-        default_categories_dict = {category_type: [] for category_type in default_category_types.split(',')}
+        # Convert input to dictionary format and remove extra spaces
+        default_categories_dict = {category_type.strip(): [] for category_type in default_category_types.split(',')}
         # Write the default categories to a new JSON file
         with open(file_path, 'w') as file:
             json.dump(default_categories_dict, file, indent=2)
@@ -78,13 +78,13 @@ def copy_to_clipboard(event):
     # Clear the clipboard and set its content to the prompt text
     root.clipboard_clear()
     root.clipboard_append(prompt_text)
-    
+        
     # Get the current text color (foreground color) of the prompt_label
     original_fg = prompt_label.cget('fg')
-    
+        
     # Change the text color to blue to indicate copying
     prompt_label.config(fg='blue')
-    
+        
     # Restore the original text color after a short delay (e.g., 100 ms)
     prompt_label.after(100, lambda: prompt_label.config(fg=original_fg))
 
@@ -120,7 +120,6 @@ def show_category_words(event, category):
 
     # Update the width of the words_window to the calculated width
     words_window.geometry(f"{words_window_width}x{words_window.winfo_reqheight()}")
-
 
 def clear_template_input():
     """Clear the content of the template input field."""
@@ -160,51 +159,27 @@ def insert_into_template(text, entry, is_category=False):
     entry.delete("1.0", tk.END)
     entry.insert(tk.END, updated_template)
 
+def create_template_builder(tab_parent):
+    global tab_template_builder, template_entry  # Access the global variables
+    # Create a new tab for the Template Builder
+    tab_template_builder = ttk.Frame(tab_parent)
+    tab_parent.add(tab_template_builder, text="Template Builder")
 
-def rebuild_categories(refresh=True):
-    """Rebuild the CATEGORIES list based on the JSON files present in the directory."""
-    global CATEGORIES_BY_TYPE  # Declare CATEGORIES_BY_TYPE as global to modify it
-    
-    # Load category types from JSON file and update CATEGORIES_BY_TYPE
+    # Load category types from JSON file
+    global CATEGORIES_BY_TYPE
     CATEGORIES_BY_TYPE = load_category_types()
-    
-    # List all files in the JSON_DIR subdirectory
-    files = os.listdir(JSON_DIR)
-    
-    # Filter for files with the .json extension
-    json_files = [file for file in files if file.endswith('.json')]
-    
-    # Update the CATEGORIES_BY_TYPE dictionary based on available JSON files
-    for category_type, categories in CATEGORIES_BY_TYPE.items():
-        # Filter JSON files that belong to the current category type
-        CATEGORIES_BY_TYPE[category_type] = [cat[:-5] for cat in json_files if cat[:-5] in categories and cat != 'category_types.json']
-    
-    # Print the content of the CATEGORIES_BY_TYPE dictionary for debugging
-    print(CATEGORIES_BY_TYPE)
-    
-    if refresh:
-        # Refresh the Template Builder tab to reflect the updated CATEGORIES_BY_TYPE dictionary
-        refresh_template_builder()
-
-def refresh_template_builder():
-    """Refresh the Template Builder tab to reflect the updated CATEGORIES_BY_TYPE dictionary."""
-    global template_entry  # Add this line to access the global variable
-    
-    # Clear the current buttons from the tab_template_builder
-    for widget in tab_template_builder.winfo_children():
-        widget.destroy()
 
     # Total number of categories
     total_categories = sum(len(categories) for categories in CATEGORIES_BY_TYPE.values())
 
-    # Recreate the input field for editing the template
+    # Create the input field for editing the template
     template_entry = scrolledtext.ScrolledText(tab_template_builder, width=75, height=2, wrap=tk.WORD)
     template_entry.grid(row=0, column=0, columnspan=max(1, total_categories), padx=10, pady=10)
 
     # Determine the maximum length of the category names for button size
     max_length = max(len(category) for categories in CATEGORIES_BY_TYPE.values() for category in categories)
 
-    # Recreate the buttons for each category type in separate rows
+    # Create buttons for each category type in separate rows
     row = 3  # Start placing category buttons from row=3
     for category_type, categories in CATEGORIES_BY_TYPE.items():
         # Create a label to display the category type
@@ -218,58 +193,13 @@ def refresh_template_builder():
             category_button.bind("<Button-3>", lambda event, cat=category: show_category_words(event, cat))
         row += 1  # Increment the row for the next category type
 
-    # Recreate the "Clear" button to clear the content of the template input field
-    clear_button = tk.Button(tab_template_builder, text="Clear", command=clear_template_input)
-    clear_button.grid(row=0, column=max(1, total_categories), padx=10, pady=10)
-
-
-def create_template_builder(tab_parent):
-    global tab_template_builder, template_entry  # Access the global variables
-    # Create a new tab for the Template Builder
-    tab_template_builder = ttk.Frame(tab_parent)
-    tab_parent.add(tab_template_builder, text="Template Builder")
-
-    # Recreate the input field for editing the template
-    total_categories = sum(len(categories) for categories in CATEGORIES_BY_TYPE.values())
-    template_entry = scrolledtext.ScrolledText(tab_template_builder, width=75, height=2, wrap=tk.WORD)
-    template_entry.grid(row=0, column=0, columnspan=max(1, total_categories), padx=10, pady=10)
-
-    # Create a frame for the text buttons
-    text_buttons_frame = tk.Frame(tab_template_builder)
-    text_buttons_frame.grid(row=2, column=0, columnspan=max(1, total_categories), padx=10, pady=5, sticky='w')
-
-    # Create a row of buttons for specific characters and strings
-    text_buttons = [", ", "of", "a", "and"]
-    for col, text in enumerate(text_buttons, start=0):
-        text_button = tk.Button(text_buttons_frame, text=text,
-                                command=lambda t=text, entry=template_entry: insert_into_template(t, entry, is_category=False))
-        text_button.grid(row=0, column=col, padx=5, pady=5)
-
     # Create a "Clear" button to clear the content of the template input field
     clear_button = tk.Button(tab_template_builder, text="Clear", command=clear_template_input)
     clear_button.grid(row=0, column=max(1, total_categories), padx=10, pady=10)
 
-    # Rebuild categories on tab creation (and refresh the Template Builder to organize categories into rows)
-    rebuild_categories(refresh=True)
-
-
-def create_settings_tab(tab_parent):
-    """Create the Settings tab."""
-    # Create a new tab for the Settings
-    tab_settings = ttk.Frame(tab_parent)
-    tab_parent.add(tab_settings, text="Settings")
-
-    # Create a button to rebuild the CATEGORIES list
-    rebuild_button = tk.Button(tab_settings, text="Rebuild Categories", command=rebuild_categories)
-    rebuild_button.pack(padx=10, pady=10)
-
 # Create the main application window
 root = tk.Tk()
 root.title("Prompt Generator")
-
-# Create a StringVar to store the template
-template_var = tk.StringVar()
-template_var.set("[medium] of [noun], [adjective], [adjective], [adjective], [style]")
 
 # Create a notebook (tab container)
 tab_parent = ttk.Notebook(root)
@@ -290,15 +220,8 @@ prompt_label.bind('<Button-1>', copy_to_clipboard)
 generate_button = tk.Button(tab_main, text="Generate Prompt", command=generate_prompt)
 generate_button.pack(pady=10)
 
-# Rebuild categories on startup (do not refresh the Template Builder since it's already created correctly)
-CATEGORIES_BY_TYPE = load_category_types()
-rebuild_categories(refresh=False)
-
 # Create the Template Builder tab
 create_template_builder(tab_parent)
-
-# Create the Settings tab
-create_settings_tab(tab_parent)
 
 # Run the application
 root.mainloop()

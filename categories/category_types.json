@@ -1,35 +1,44 @@
 {
-    "noun": [
-        "abstract",
-        "animal",
-        "emotion",
-        "food",
-        "location",
-        "nature",
-        "object",
-        "profession"
-    ],
-	
-	"adjective": [
-        "color",
-        "size",
-        "shape",
-        "feeling",
-        "opinion",
-        "quantity"
-	],
-	
-	"verb": [
-        "action",
-        "mental",
-        "communication",
-        "motion",
-        "possession",
-        "creation"
-    ],
-	
-	"uncategorized": [
-        "medium",
-        "style"
-    ]
+  "noun": [
+    "abstract",
+    "animal",
+    "emotion",
+    "food",
+    "location",
+    "nature",
+    "object",
+    "profession"
+  ],
+
+  "adjective": [
+    "color",
+    "size",
+    "shape",
+    "feeling",
+    "opinion",
+    "quantity"
+  ],
+
+  "verb": [
+    "action",
+    "mental",
+    "communication",
+    "motion",
+    "possession",
+    "creation"
+  ],
+
+  "people": [
+    "artist",
+    "celebrity",
+    "comics",
+    "disney",
+    "movies-tv",
+    "games"
+  ],
+
+  "uncategorized": [
+    "medium",
+    "style"
+  ]
 }
