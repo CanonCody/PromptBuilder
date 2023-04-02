@@ -11,34 +11,24 @@ def load_words(category):
     """Load words from JSON file for the given category."""
     try:
         with open(f'{category}.json', 'r') as file:
-            file_content = file.read().strip()
-            if not file_content:
-                # If the file is empty, return an empty list
-                print(f'Error: JSON file for category "{category}" is empty.')
-                return []
-            # Parse the file content as JSON
-            words = json.loads(file_content)
+            words = json.load(file)
         return words
-    except json.JSONDecodeError:
-        print(f'Error: JSON file for category "{category}" contains invalid JSON.')
-        return []
     except FileNotFoundError:
         print(f'Error: JSON file for category "{category}" not found.')
-        return []
+    except json.JSONDecodeError as e:
+        print(f'Error: JSON file for category "{category}" contains invalid JSON. {e}')
+    return []
 
 def load_category_types():
     """Load category types from JSON file."""
-    global CATEGORIES_BY_TYPE
     try:
         with open('category_types.json', 'r') as file:
-            CATEGORIES_BY_TYPE = json.load(file)
-    except (FileNotFoundError, json.JSONDecodeError) as e:
-        print(f'Error: Unable to load category types. {e}')
-        # Initialize with default empty lists
-        CATEGORIES_BY_TYPE = {
-            'uncategorized': [],
-            'nouns': []
-        }
+            return json.load(file)
+    except FileNotFoundError:
+        print('Error: Unable to load category types. JSON file not found.')
+    except json.JSONDecodeError as e:
+        print(f'Error: Unable to load category types. Invalid JSON. {e}')
+    return {'uncategorized': [], 'nouns': []}
 
 def build_prompt(template):
     """Build a prompt using the provided template and word categories."""
@@ -46,13 +36,9 @@ def build_prompt(template):
     for category in all_categories:
         # Load words for the current category from JSON file
         words = load_words(category)
-        # Count the number of times the category appears in the template
-        count = template.count(f'[{category}]')
-        # Loop to replace each occurrence with a unique random word
-        for _ in range(count):
-            # Randomly select a word from the list of words
+        # Replace each occurrence with a unique random word
+        while f'[{category}]' in template:
             selected_word = random.choice(words) if words else ''
-            # Replace one placeholder in the template with the selected word
             template = template.replace(f'[{category}]', selected_word, 1)
     return template
 
@@ -205,6 +191,7 @@ generate_button = tk.Button(tab_main, text="Generate Prompt", command=generate_p
 generate_button.pack(pady=10)
 
 # Rebuild categories on startup (do not refresh the Template Builder since it's already created correctly)
+CATEGORIES_BY_TYPE = load_category_types()
 rebuild_categories(refresh=False)
 
 # Create the Template Builder tab
