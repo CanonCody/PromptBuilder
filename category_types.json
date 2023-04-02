@@ -1,5 +1,5 @@
 {
-    "nouns": [
+    "noun": [
         "abstract",
         "animal",
         "emotion",
@@ -16,9 +16,17 @@
         "shape",
         "feeling",
         "opinion",
-        "quantity",
-        "other"
+        "quantity"
 	],
+	
+	"verb": [
+        "action",
+        "mental",
+        "communication",
+        "motion",
+        "possession",
+        "creation"
+    ],
 	
 	"uncategorized": [
         "medium",
