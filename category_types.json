@@ -9,8 +9,18 @@
         "object",
         "profession"
     ],
-    "uncategorized": [
-        "adjective",
+	
+	"adjective": [
+        "color",
+        "size",
+        "shape",
+        "feeling",
+        "opinion",
+        "quantity",
+        "other"
+	],
+	
+	"uncategorized": [
         "medium",
         "style"
     ]

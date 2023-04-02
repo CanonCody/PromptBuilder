@@ -133,7 +133,6 @@ def refresh_template_builder():
     clear_button.grid(row=0, column=max(1, sum(len(categories) for categories in CATEGORIES_BY_TYPE.values())), padx=10, pady=10)
 
 
-
 def create_template_builder(tab_parent):
     """Create the Template Builder tab."""
     global tab_template_builder  # Declare tab_template_builder as a global variable
