@@ -4,6 +4,7 @@ import os
 import re
 import openai
 import tkinter as tk
+from functools import partial
 from tkinter import scrolledtext
 from dotenv import load_dotenv
 from tkinter import ttk
@@ -11,11 +12,22 @@ from tkinter import ttk
 # Load the environment variables from the .env file
 load_dotenv()
 
+# Create the main application window
+root = tk.Tk()
+root.title("Prompt Generator")
+
 # Define the name of the subdirectory where JSON files are stored
 JSON_DIR = "categories"
 
 # Initialize CATEGORIES_BY_TYPE as a dictionary with default empty lists
 CATEGORIES_BY_TYPE = {}
+
+# Define global variables for category combination functionality
+combine_categories = tk.BooleanVar()
+selected_categories = []
+
+BUTTON_NORMAL_BG = "SystemButtonFace"  # Default button background color
+BUTTON_SELECTED_BG = "lightblue"       # Highlight color for selected buttons
 
 def load_words(category):
     """Load words from JSON file for the given category."""
@@ -194,8 +206,18 @@ def clear_template_input():
     global template_entry  # Access the global variable
     template_entry.delete("1.0", tk.END)  # Clear the content of the template_entry widget
 
-def insert_into_template(text, entry, is_category=False):
-    """Insert the specified text or category into the template input field."""
+def insert_into_template(text, entry, is_category=False, button=None):
+    global selected_categories
+    if combine_categories.get() and is_category:
+        # Add or remove the category from the list of selected categories
+        if text in selected_categories:
+            selected_categories.remove(text)
+            button.config(bg=BUTTON_NORMAL_BG)  # Reset button color to normal
+        else:
+            selected_categories.append(text)
+            button.config(bg=BUTTON_SELECTED_BG)  # Highlight button color
+        return
+
     def should_add_space(target, index, is_before):
         """Determine if a space should be added before or after the index."""
         if not target:  # Empty target
@@ -209,23 +231,45 @@ def insert_into_template(text, entry, is_category=False):
     current_template = entry.get("1.0", tk.END)[:-1]
     cursor_position_str = entry.index(tk.INSERT)
     cursor_index = int(entry.index(cursor_position_str).split('.')[1])
-    
+
     # Wrap category in square brackets if it's a category
     if is_category:
         text = f'[{text}]'
-    
+
     # Add space before the text if necessary
     if should_add_space(current_template, cursor_index, is_before=True):
         text = ' ' + text
-    
+
     # Add space after the text if necessary
     if should_add_space(current_template, cursor_index, is_before=False):
         text += ' '
-    
+
     # Insert the text into the current template
     updated_template = current_template[:cursor_index] + text + current_template[cursor_index:]
     entry.delete("1.0", tk.END)
     entry.insert(tk.END, updated_template)
+
+def toggle_category_combination():
+    """Clear selected categories when toggling category combination."""
+    global selected_categories
+    selected_categories = []
+
+def confirm_combine_categories(entry, category_buttons):
+    # Combine the selected categories and insert them into the template
+    global selected_categories
+    combined_categories = '/'.join(selected_categories)
+    if combined_categories:
+        # Wrap the combined categories in square brackets
+        insert_into_template(f'[{combined_categories}]', entry, is_category=False)
+    selected_categories = []
+
+    # Reset the background color of all category buttons to the normal state
+    for btn in category_buttons:
+        btn.config(bg=BUTTON_NORMAL_BG)
+
+def category_button_click(category, button, entry):
+    insert_into_template(category, entry, is_category=True, button=button)
+
 
 def create_template_builder(tab_parent):
     global tab_template_builder, template_entry  # Access the global variables
@@ -247,6 +291,12 @@ def create_template_builder(tab_parent):
     # Determine the maximum length of the category names for button size
     max_length = max(len(category) for categories in CATEGORIES_BY_TYPE.values() for category in categories)
 
+    # Create a checkbox for toggling category combination functionality
+    combine_checkbox = tk.Checkbutton(tab_template_builder, text="Combine Categories", variable=combine_categories, command=toggle_category_combination)
+    combine_checkbox.grid(row=1, column=0, padx=5, pady=5, sticky='w')
+
+    category_buttons = []  # Store all category buttons
+
     # Create buttons for each category type in separate rows
     row = 3  # Start placing category buttons from row=3
     for category_type, categories in CATEGORIES_BY_TYPE.items():
@@ -258,20 +308,24 @@ def create_template_builder(tab_parent):
         )
         category_type_button.grid(row=row, column=0, padx=5, pady=5, sticky='w')
         for col, category in enumerate(categories, start=1):
-            category_button = tk.Button(tab_template_builder, text=category, width=max_length,
-                            command=lambda cat=category, entry=template_entry: insert_into_template(cat, entry, is_category=True))
+            # Create category buttons
+            category_button = tk.Button(tab_template_builder, text=category, width=max_length)
             category_button.grid(row=row, column=col, padx=5, pady=5)
             # Bind right-click event (Button-3) to show_category_words function
             category_button.bind("<Button-3>", lambda event, cat=category: show_category_words(event, cat))
+            # Use partial to bind parameters to insert_into_template function
+            category_button.config(command=partial(insert_into_template, category, template_entry, True, category_button))
+            category_buttons.append(category_button)  # Add the button to the list
         row += 1  # Increment the row for the next category type
+
+    # Create a button for confirming category combination
+    confirm_combine_button = tk.Button(tab_template_builder, text="Confirm Combine", command=lambda entry=template_entry, buttons=category_buttons: confirm_combine_categories(entry, buttons))
+    confirm_combine_button.grid(row=1, column=1, padx=5, pady=5, sticky='w')
 
     # Create a "Clear" button to clear the content of the template input field
     clear_button = tk.Button(tab_template_builder, text="Clear", command=clear_template_input)
     clear_button.grid(row=0, column=max(1, total_categories), padx=10, pady=10)
 
-# Create the main application window
-root = tk.Tk()
-root.title("Prompt Generator")
 
 # Create a notebook (tab container)
 tab_parent = ttk.Notebook(root)
