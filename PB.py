@@ -6,6 +6,8 @@ import openai
 import tkinter as tk
 from tkinter import scrolledtext
 from tkinter import ttk
+from dotenv import load_dotenv
+
 
 # Define the name of the subdirectory where JSON files are stored
 JSON_DIR = "categories"
@@ -13,6 +15,12 @@ JSON_DIR = "categories"
 # Initialize CATEGORIES_BY_TYPE as a dictionary with default empty lists
 CATEGORIES_BY_TYPE = {}
 
+# Additional global variables
+combine_mode = False  # Indicates whether the combine mode is active
+selected_categories = set()  # Stores selected categories for combining
+
+# Load the environment variables from the .env file
+load_dotenv()
 
 def load_words(category):
     """Load words from JSON file for the given category."""
@@ -113,7 +121,7 @@ def generate_prompt_gpt():
         # Call the OpenAI Chat API
         try:
             # Set the OpenAI API key
-            openai.api_key = "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"
+            openai.api_key = os.environ.get("OPENAI_API_KEY")
 
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
@@ -225,8 +233,47 @@ def insert_into_template(text, entry, is_category=False):
     entry.insert(tk.END, updated_template)
 
 
+def toggle_combine_mode():
+    """Toggle combine mode on and off."""
+    global combine_mode, selected_categories, category_buttons
+    combine_mode = not combine_mode
+    
+    # Reset selected categories and button backgrounds
+    selected_categories.clear()
+    for btn in category_buttons.values():
+        btn.config(bg='SystemButtonFace')
+
+def select_category(category):
+    """Select a category for combining or insert it into the template."""
+    global selected_categories, category_buttons, combine_mode  # Access the global variables
+    if combine_mode:
+        # In combine mode, toggle category selection
+        button = category_buttons[category]
+        if category in selected_categories:
+            selected_categories.remove(category)
+            button.config(bg='SystemButtonFace')
+        else:
+            selected_categories.add(category)
+            button.config(bg='yellow')
+    else:
+        # In default mode, insert the category into the template
+        insert_into_template(category, template_entry, is_category=True)
+
+def confirm_combine():
+    """Insert the combined category into the template."""
+    global selected_categories, combine_mode
+    if selected_categories:
+        combined_category = '/'.join(selected_categories)
+        insert_into_template(combined_category, template_entry, is_category=True)
+        toggle_combine_mode()
+    else:
+        # If no categories are selected, disable combine mode
+        toggle_combine_mode()
+
+
+
 def create_template_builder(tab_parent):
-    global tab_template_builder, template_entry  # Access the global variables
+    global tab_template_builder, template_entry, category_buttons
     # Create a new tab for the Template Builder
     tab_template_builder = ttk.Frame(tab_parent)
     tab_parent.add(tab_template_builder, text="Template Builder")
@@ -235,12 +282,40 @@ def create_template_builder(tab_parent):
     global CATEGORIES_BY_TYPE
     CATEGORIES_BY_TYPE = load_category_types()
 
+    # Create a dictionary to store the category buttons
+    category_buttons = {}
+
+    # Determine the maximum length of the category names for button size
+    max_length = max(len(category) for categories in CATEGORIES_BY_TYPE.values() for category in categories)
+
+    row = 3  # Start placing category buttons from row=3
+
+    # (The loop for creating category buttons is updated.)
+    for category_type in CATEGORIES_BY_TYPE:
+        categories = CATEGORIES_BY_TYPE[category_type]  # Get the list of categories for the current category type
+        for col, category in enumerate(categories, start=1):
+            category_button = tk.Button(tab_template_builder, text=category, width=max_length,
+                            command=lambda cat=category: select_category(cat))
+            category_button.grid(row=row, column=col, padx=5, pady=5)
+            category_buttons[category] = category_button
+            category_button.bind("<Button-3>", lambda event, cat=category: show_category_words(event, cat))
+        row += 1  # Increment the row for the next category type
+
+
     # Total number of categories
     total_categories = sum(len(categories) for categories in CATEGORIES_BY_TYPE.values())
 
     # Create the input field for editing the template
     template_entry = scrolledtext.ScrolledText(tab_template_builder, width=75, height=2, wrap=tk.WORD)
     template_entry.grid(row=0, column=0, columnspan=max(1, total_categories), padx=10, pady=10)
+
+    # Create a "Combine Categories" button
+    combine_button = tk.Button(tab_template_builder, text="Combine Categories", command=toggle_combine_mode)
+    combine_button.grid(row=1, column=0, padx=10, pady=10)
+
+    # Create a "Confirm Combine" button
+    confirm_button = tk.Button(tab_template_builder, text="Confirm Combine", command=confirm_combine)
+    confirm_button.grid(row=1, column=1, padx=10, pady=10)
 
     # Determine the maximum length of the category names for button size
     max_length = max(len(category) for categories in CATEGORIES_BY_TYPE.values() for category in categories)
