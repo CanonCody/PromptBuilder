@@ -6,6 +6,7 @@ import openai
 import tkinter as tk
 from functools import partial
 from tkinter import scrolledtext
+import tkinter.messagebox as messagebox
 from dotenv import load_dotenv
 from tkinter import ttk
 
@@ -23,11 +24,16 @@ JSON_DIR = "categories"
 CATEGORIES_BY_TYPE = {}
 
 # Define global variables for category combination functionality
-combine_categories = tk.BooleanVar()
 selected_categories = []
 
 BUTTON_NORMAL_BG = "SystemButtonFace"  # Default button background color
 BUTTON_SELECTED_BG = "lightblue"       # Highlight color for selected buttons
+
+# Define a global variable for the template_entry widget and the number of prompts to generate
+template_entry = None
+num_prompts_to_generate = tk.IntVar()
+
+#Startup
 
 def load_words(category):
     """Load words from JSON file for the given category."""
@@ -63,6 +69,8 @@ def load_category_types():
     except json.JSONDecodeError as e:
         print(f'Error: Unable to load category types. Invalid JSON. {e}')
     return {'uncategorized': [], 'nouns': []}
+
+#Prompt Creation
 
 def build_prompt(template):
     """Build a prompt using the provided template and word categories."""
@@ -112,7 +120,6 @@ def generate_prompt():
     # Display the generated prompts
     prompt_label.config(text="\n".join(generated_prompts))
 
-
 def generate_prompt_gpt():
     """Generate a prompt using the GPT API and the user-defined template."""
     global template_entry  # Access the global variable
@@ -158,6 +165,7 @@ def generate_prompt_gpt():
     # Display the generated prompts
     prompt_label.config(text="\n".join(generated_prompts))
 
+#Utility
 
 def copy_to_clipboard(event):
     """Copy the prompt text to the clipboard and provide a visual indication."""
@@ -208,6 +216,52 @@ def show_category_words(event, category):
 
     # Update the width of the words_window to the calculated width
     words_window.geometry(f"{words_window_width}x{words_window.winfo_reqheight()}")
+
+#JSON Editor
+
+def load_selected_category(event):
+    # Get the selected item's index in the listbox
+    selected_index = category_listbox.curselection()
+    
+    # Check if an item is selected
+    if selected_index:
+        # Get the selected category from the listbox
+        selected_category = category_listbox.get(selected_index)
+        
+        # Clear the text editor
+        json_text_editor.delete("1.0", tk.END)
+        
+        # Load words for the selected category
+        words = load_words(selected_category)
+        
+        # Display the words in the text editor
+        json_text_editor.insert(tk.END, json.dumps(words, indent=2))
+
+def save_edited_json():
+    # Get the selected category from the listbox
+    selected_category = category_listbox.get(category_listbox.curselection())
+    
+    # Get the edited content from the text editor
+    edited_content = json_text_editor.get("1.0", tk.END).strip()
+    
+    # Build the file path using the JSON_DIR constant
+    file_path = os.path.join(JSON_DIR, f'{selected_category}.json')
+    
+    try:
+        # Parse the edited content as JSON
+        words = json.loads(edited_content)
+        
+        # Save the edited content to the JSON file
+        with open(file_path, 'w') as file:
+            json.dump(words, file, indent=2)
+        
+        # Show a success message
+        messagebox.showinfo("Success", "Changes saved successfully.")
+    except json.JSONDecodeError:
+        # Show an error message if the content is not valid JSON
+        messagebox.showerror("Error", "Invalid JSON format.")
+
+#Template
 
 def clear_template_input():
     """Clear the content of the template input field."""
@@ -278,6 +332,7 @@ def confirm_combine_categories(entry, category_buttons):
 def category_button_click(category, button, entry):
     insert_into_template(category, entry, is_category=True, button=button)
 
+#Tabs
 
 def create_template_builder(tab_parent):
     global tab_template_builder, template_entry  # Access the global variables
@@ -334,6 +389,38 @@ def create_template_builder(tab_parent):
     clear_button = tk.Button(tab_template_builder, text="Clear", command=clear_template_input)
     clear_button.grid(row=0, column=max(1, total_categories), padx=10, pady=10)
 
+def create_dictionary_tab(tab_parent):
+    # Create a new tab for the Dictionary
+    tab_dictionary = ttk.Frame(tab_parent)
+    tab_parent.add(tab_dictionary, text="Dictionary")
+    
+    # Create a Listbox to display the list of categories
+    global category_listbox
+    category_listbox = tk.Listbox(tab_dictionary)
+    category_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    
+    # Bind the selection event to load the selected category
+    category_listbox.bind('<<ListboxSelect>>', load_selected_category)
+    
+    # Load category types
+    category_types = load_category_types()
+    
+    # Populate the Listbox with the category names
+    for category_type, categories in category_types.items():
+        for category in categories:
+            category_listbox.insert(tk.END, category)
+    
+    # Create a Text widget to serve as a JSON editor
+    global json_text_editor
+    json_text_editor = tk.Text(tab_dictionary, wrap=tk.NONE)
+    json_text_editor.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+    
+    # Create a button to save the edited JSON content
+    save_button = tk.Button(tab_dictionary, text="Save Changes", command=save_edited_json)
+    save_button.pack()
+
+# Initialize tkinter variables after the root window is created
+combine_categories = tk.BooleanVar()
 
 # Create a notebook (tab container)
 tab_parent = ttk.Notebook(root)
@@ -358,11 +445,6 @@ generate_button.pack(pady=10)
 generate_ai_button = tk.Button(tab_main, text="Generate (GPT)", command=generate_prompt_gpt)
 generate_ai_button.pack(pady=10)
 
-# Define a global variable for the template_entry widget and the number of prompts to generate
-template_entry = None
-num_prompts_to_generate = tk.IntVar()
-num_prompts_to_generate.set(1)  # Set the default value to 1
-
 # Create a label and entry to input the number of prompts to generate
 num_prompts_label = tk.Label(tab_main, text="Number of prompts to generate:")
 num_prompts_label.pack()
@@ -372,6 +454,8 @@ num_prompts_entry.pack()
 # Create the Template Builder tab
 create_template_builder(tab_parent)
 
+# Create the "Dictionary" tab
+create_dictionary_tab(tab_parent)
 
 # Run the application
 root.mainloop()
