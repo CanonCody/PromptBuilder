@@ -321,6 +321,20 @@ def save_edited_types():
         # Show an error message if the content is not valid JSON
         tk.messagebox.showerror("Error", "Invalid JSON format.")
 
+def create_empty_json_files():
+    """Create empty JSON files for categories that do not have corresponding JSON files."""
+    # Iterate through all category types and categories
+    for categories in CATEGORIES_BY_TYPE.values():
+        for category in categories:
+            # Build the file path using the JSON_DIR constant and category name
+            file_path = os.path.join(JSON_DIR, f'{category}.json')
+            # Check if the JSON file does not exist
+            if not os.path.exists(file_path):
+                # Create and write an empty list to the new JSON file
+                with open(file_path, 'w') as file:
+                    json.dump([], file, indent=2)
+                print(f'Created empty JSON file for category "{category}".')
+
 #Template
 
 def clear_template_input():
@@ -476,6 +490,10 @@ def create_dictionary_tab(tab_parent):
     # Create an "Edit Types" button to open the edit types window
     edit_types_button = tk.Button(tab_dictionary, text="Edit Types", command=open_edit_types_window)
     edit_types_button.pack()
+
+    # Create a button to create empty JSON files for categories
+    create_empty_json_button = tk.Button(tab_dictionary, text="Create Empty JSON Files", command=create_empty_json_files)
+    create_empty_json_button.pack()
     
     # Create a Text widget to serve as a JSON editor
     global json_text_editor
