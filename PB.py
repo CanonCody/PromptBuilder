@@ -1,6 +1,8 @@
 import json
 import random
 import os
+import re
+import openai
 import tkinter as tk
 from tkinter import scrolledtext
 from tkinter import ttk
@@ -10,6 +12,7 @@ JSON_DIR = "categories"
 
 # Initialize CATEGORIES_BY_TYPE as a dictionary with default empty lists
 CATEGORIES_BY_TYPE = {}
+
 
 def load_words(category):
     """Load words from JSON file for the given category."""
@@ -48,18 +51,22 @@ def load_category_types():
 
 def build_prompt(template):
     """Build a prompt using the provided template and word categories."""
+    for category_type, categories in CATEGORIES_BY_TYPE.items():
+        while f'[{category_type}]' in template:
+            # Randomly select a category from the category type
+            selected_category = random.choice(categories)
+            words = load_words(selected_category)
+            selected_word = random.choice(words) if words else ''
+            template = template.replace(f'[{category_type}]', selected_word, 1)
+
+    # Replace placeholders for individual categories (existing code)
     all_categories = [cat for cat_list in CATEGORIES_BY_TYPE.values() for cat in cat_list]
     for category in all_categories:
-        # Load words for the current category from JSON file
         words = load_words(category)
-        # Replace each occurrence with a unique random word
         while f'[{category}]' in template:
             selected_word = random.choice(words) if words else ''
             template = template.replace(f'[{category}]', selected_word, 1)
     return template
-
-# Define a global variable for the template_entry widget
-template_entry = None
 
 def generate_prompt():
     """Generate a prompt using the user-defined template and display it."""
@@ -67,9 +74,67 @@ def generate_prompt():
     # Get the template from the template_entry widget
     template = template_entry.get("1.0", tk.END)[:-1]  # Remove the trailing newline character
 
-    # Build and display the prompt
-    prompt = build_prompt(template)
-    prompt_label.config(text=prompt)
+    # Get the number of prompts to generate
+    num_prompts = num_prompts_to_generate.get()
+
+    # Initialize a list to store the generated prompts
+    generated_prompts = []
+
+    # Generate the specified number of prompts
+    for _ in range(num_prompts):
+        # Build and append the prompt to the list
+        prompt = build_prompt(template)
+        generated_prompts.append(prompt)
+
+    # Display the generated prompts
+    prompt_label.config(text="\n".join(generated_prompts))
+
+
+def generate_prompt_gpt():
+    """Generate a prompt using the GPT API and the user-defined template."""
+    global template_entry  # Access the global variable
+    # Get the template from the template_entry widget
+    template = template_entry.get("1.0", tk.END)[:-1]  # Remove the trailing newline character
+    
+    # Get the number of prompts to generate
+    num_prompts = num_prompts_to_generate.get()
+
+    # Initialize a list to store the generated prompts
+    generated_prompts = []
+
+    # Generate the specified number of prompts
+    for _ in range(num_prompts):
+        # Prepare the conversation messages
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant. Your task is to replace the brackets in the provided template. Each bracket contains a category name, and you should replace the bracket with a word or phrase that matches the specified category. For example, if the template is 'The [color] [animal] jumped over the fence', you could complete it as 'The brown rabbit jumped over the fence' Make sure to not leave any brackets in the completion."},
+            {"role": "user", "content": f"replace the brackets with a random appropriate completions: {template}"}
+        ]
+
+        # Call the OpenAI Chat API
+        try:
+            # Set the OpenAI API key
+            openai.api_key = "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"
+
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=messages
+            )
+
+            # Extract the assistant's response
+            prompt = response['choices'][0]['message']['content']
+
+            if prompt:
+                # Append the generated prompt to the list
+                generated_prompts.append(prompt)
+            else:
+                generated_prompts.append("Failed to generate text.")
+        except Exception as e:
+            print(f"Error: {e}")
+            generated_prompts.append("Failed to generate text.")
+    
+    # Display the generated prompts
+    prompt_label.config(text="\n".join(generated_prompts))
+
 
 def copy_to_clipboard(event):
     """Copy the prompt text to the clipboard and provide a visual indication."""
@@ -159,6 +224,7 @@ def insert_into_template(text, entry, is_category=False):
     entry.delete("1.0", tk.END)
     entry.insert(tk.END, updated_template)
 
+
 def create_template_builder(tab_parent):
     global tab_template_builder, template_entry  # Access the global variables
     # Create a new tab for the Template Builder
@@ -182,9 +248,13 @@ def create_template_builder(tab_parent):
     # Create buttons for each category type in separate rows
     row = 3  # Start placing category buttons from row=3
     for category_type, categories in CATEGORIES_BY_TYPE.items():
-        # Create a label to display the category type
-        category_type_label = tk.Label(tab_template_builder, text=category_type.capitalize())
-        category_type_label.grid(row=row, column=0, padx=5, pady=5, sticky='w')
+        # Create a button for the category type (row name)
+        category_type_button = tk.Button(
+            tab_template_builder,
+            text=category_type.capitalize(),
+            command=lambda cat_type=category_type, entry=template_entry: insert_into_template(cat_type, entry, is_category=True)
+        )
+        category_type_button.grid(row=row, column=0, padx=5, pady=5, sticky='w')
         for col, category in enumerate(categories, start=1):
             category_button = tk.Button(tab_template_builder, text=category, width=max_length,
                             command=lambda cat=category, entry=template_entry: insert_into_template(cat, entry, is_category=True))
@@ -217,11 +287,27 @@ prompt_label.pack(pady=10)
 prompt_label.bind('<Button-1>', copy_to_clipboard)
 
 # Create a button to generate prompts
-generate_button = tk.Button(tab_main, text="Generate Prompt", command=generate_prompt)
+generate_button = tk.Button(tab_main, text="Generate (JSON)", command=generate_prompt)
 generate_button.pack(pady=10)
+
+# Create a new button "Generate AI" on the "Generate" tab
+generate_ai_button = tk.Button(tab_main, text="Generate (GPT)", command=generate_prompt_gpt)
+generate_ai_button.pack(pady=10)
+
+# Define a global variable for the template_entry widget and the number of prompts to generate
+template_entry = None
+num_prompts_to_generate = tk.IntVar()
+num_prompts_to_generate.set(1)  # Set the default value to 1
+
+# Create a label and entry to input the number of prompts to generate
+num_prompts_label = tk.Label(tab_main, text="Number of prompts to generate:")
+num_prompts_label.pack()
+num_prompts_entry = tk.Entry(tab_main, textvariable=num_prompts_to_generate)
+num_prompts_entry.pack()
 
 # Create the Template Builder tab
 create_template_builder(tab_parent)
+
 
 # Run the application
 root.mainloop()

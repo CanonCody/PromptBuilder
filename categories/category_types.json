@@ -1,23 +1,59 @@
 {
-  "noun": [
-    "abstract",
+
+  "subject": [
     "animal",
-    "emotion",
+    "plant",
+    "mythical",
+    "geological",
+    "celestial"
+  ],
+
+  "object": [
     "food",
-    "location",
-    "nature",
-    "object",
+    "toy",
+    "weapon",
+    "apparel",
+    "vehicle"
+  ],
+
+  "identity": [
+    "culture",
+    "ethnicity",
+    "age",
+    "nationality",
+    "religon",
+    "social-class",
     "profession"
   ],
 
-  "adjective": [
-    "color",
-    "size",
-    "shape",
-    "feeling",
-    "opinion",
-    "quantity"
+  "locations": [
+    "city",
+    "country",
+    "urban",
+    "natural",
+    "landmark"
   ],
+
+  "describer": [
+    "color",
+    "texture",
+    "shape",
+    "quanitity",
+    "quality",
+    "opinion",
+    "emotion"
+  ],
+
+  "artistic": [
+    "medium",
+    "style",
+    "genre",
+    "theme",
+    "mood",
+    "perspective",
+    "lighiting"
+  ],
+
 
   "verb": [
     "action",
@@ -28,17 +64,36 @@
     "creation"
   ],
 
-  "people": [
-    "artist",
+  "media": [
+    "movie",
+    "tv-show",
+    "anime",
+    "video-game",
+    "book"
+  ],
+
+  "name": [
     "celebrity",
-    "comics",
-    "disney",
-    "movies-tv",
-    "games"
+    "historical",
+    "comic-character",
+    "disney-character",
+    "movies-character",
+    "tv-character",
+    "game-character"
+  ],
+
+  "time": [
+    "time",
+    "year",
+    "period"
+  ],
+
+  "event": [
+    "historical",
+    "natural disaster"
   ],
 
   "uncategorized": [
-    "medium",
-    "style"
+
   ]
 }
