@@ -360,7 +360,10 @@ def ai_populate_category():
             # Debug information: Print the AI response to the console
             print("AI Response:", ai_response)
             # Use regular expressions to extract the list of suggested words from the response
-            suggested_words = re.findall(r'"(\w+)"', ai_response)
+            # Updated regex to capture single-quoted and double-quoted words
+            suggested_words = re.findall(r'"([^"]+)"|\'([^\']+)\'' , ai_response)
+            # Flatten the list of tuples and filter out empty strings
+            suggested_words = [word for tup in suggested_words for word in tup if word]
             # Filter out words that are already in the current list
             new_words = [word for word in suggested_words if word not in current_words]
             # Debug information: Print the new words to the console
@@ -368,20 +371,22 @@ def ai_populate_category():
             if new_words:
                 # Append the new words to the current list
                 current_words.extend(new_words)
+                # Sort the updated list of words in alphabetical order
+                current_words = sorted(current_words)
                 # Convert the updated list of words to JSON format
                 updated_words_json = json.dumps(current_words, indent=2)
                 # Display the updated list of words in the JSON editor
                 json_text_editor.delete("1.0", tk.END)
                 json_text_editor.insert(tk.END, updated_words_json)
-                # Apply the "highlight" tag to the newly added words
-                start_index = json_text_editor.search(json.dumps(new_words[0]), "1.0", tk.END)
-                end_index = json_text_editor.index(tk.END)
-                json_text_editor.tag_add("highlight", start_index, end_index)
+                # Highlight only the new words
+                for new_word in new_words:
+                    start_index = json_text_editor.search(json.dumps(new_word), "1.0", tk.END)
+                    end_index = f"{start_index}+{len(json.dumps(new_word))}c"
+                    json_text_editor.tag_add("highlight", start_index, end_index)
         except Exception as e:
             # Debug information: Print the error message to the console
             print("Error:", e)
             messagebox.showerror("Error", "Failed to populate category using AI.")
-
 
 
 def ai_suggest_category():
@@ -395,7 +400,7 @@ def ai_suggest_category():
         words = load_words(category)
         # Prepare the conversation messages
         messages = [
-            {"role": "system", "content": "You are a helpful assistant. Your task is to suggest additional words that match the specified category. Do not suggest any words that are already on the list."},
+            {"role": "system", "content": "You are a helpful assistant. Your task is to suggest additional words that match the specified category. Do not suggest any words that are already on the list. Respond with each suggested word in quotes."},
             {"role": "user", "content": f"Category: {category}. Current list: {words}. Suggest some additional words that match the category and are not already on the list."}
         ]
         try:
@@ -408,12 +413,14 @@ def ai_suggest_category():
             )
             # Extract the assistant's response
             ai_response = response['choices'][0]['message']['content']
-            # Print the AI response to the console for debugging
+            # Debug information: Print the AI response to the console
             print("AI Response:", ai_response)
             # Use regular expressions to extract the list of suggested words from the response
-            suggested_words = re.findall(r'- (\w+)', ai_response)
-            # Convert the list of suggested words to JSON format
-            suggested_words_json = json.dumps(suggested_words, indent=2)
+            suggested_words = re.findall(r'"(\w+)"', ai_response)
+            # Filter out words that are already in the current list
+            new_suggested_words = [word for word in suggested_words if word not in words]
+            # Convert the list of new suggested words to JSON format
+            suggested_words_json = json.dumps(new_suggested_words, indent=2)
             # Create a popup to display the suggested words in JSON format
             suggest_window = tk.Toplevel(root)
             suggest_window.title("AI Suggested Words")
@@ -423,9 +430,10 @@ def ai_suggest_category():
             # Set the ScrolledText widget to read-only mode
             suggest_text.configure(state='disabled')
         except Exception as e:
-            # Print the error message to the console for debugging
+            # Debug information: Print the error message to the console
             print("Error:", e)
             messagebox.showerror("Error", "Failed to suggest words using AI.")
+
 
 #Template
 

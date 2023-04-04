@@ -1,1 +1,16 @@
-[]
+[
+  "airplane",
+  "bicycle",
+  "boat",
+  "bus",
+  "car",
+  "helicopter",
+  "hovercraft",
+  "motorcycle",
+  "scooter",
+  "spaceship",
+  "submarine",
+  "train",
+  "truck",
+  "van"
+]

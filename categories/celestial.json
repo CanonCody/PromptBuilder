@@ -1,1 +1,12 @@
-[]
+[
+  "asteroid",
+  "celestial",
+  "comet",
+  "constellation",
+  "galaxy",
+  "meteoroid",
+  "nebula",
+  "planetoid",
+  "quasar",
+  "supernova"
+]
