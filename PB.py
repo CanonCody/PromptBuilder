@@ -74,13 +74,21 @@ def build_prompt(template):
             selected_word = random.choice(words) if words else ''
             template = template.replace(f'[{category_type}]', selected_word, 1)
 
-    # Replace placeholders for individual categories (existing code)
-    all_categories = [cat for cat_list in CATEGORIES_BY_TYPE.values() for cat in cat_list]
-    for category in all_categories:
-        words = load_words(category)
-        while f'[{category}]' in template:
-            selected_word = random.choice(words) if words else ''
-            template = template.replace(f'[{category}]', selected_word, 1)
+    # Find placeholders with combined categories
+    combined_category_placeholders = re.findall(r'\[([\w/]+)\]', template)
+
+    for combined_categories in combined_category_placeholders:
+        # Split combined categories into a list
+        categories = combined_categories.split('/')
+        # Randomly select a category from the list
+        selected_category = random.choice(categories)
+        # Load words for the selected category
+        words = load_words(selected_category)
+        # Randomly select a word from the list
+        selected_word = random.choice(words) if words else ''
+        # Replace the placeholder with the selected word
+        template = template.replace(f'[{combined_categories}]', selected_word, 1)
+
     return template
 
 def generate_prompt():
