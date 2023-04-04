@@ -1,5 +1,4 @@
 {
-
   "subject": [
     "animal",
     "plant",
@@ -7,7 +6,6 @@
     "geological",
     "celestial"
   ],
-
   "object": [
     "food",
     "toy",
@@ -15,7 +13,6 @@
     "apparel",
     "vehicle"
   ],
-
   "identity": [
     "culture",
     "ethnicity",
@@ -25,15 +22,14 @@
     "social-class",
     "profession"
   ],
-
   "locations": [
     "city",
     "country",
     "urban",
     "natural",
-    "landmark"
+    "landmark",
+    "fantasy"
   ],
-
   "describer": [
     "color",
     "texture",
@@ -43,7 +39,6 @@
     "opinion",
     "emotion"
   ],
-
   "artistic": [
     "medium",
     "style",
@@ -53,8 +48,6 @@
     "perspective",
     "lighiting"
   ],
-
-
   "verb": [
     "action",
     "mental",
@@ -63,7 +56,6 @@
     "possession",
     "creation"
   ],
-
   "media": [
     "movie",
     "tv-show",
@@ -71,7 +63,6 @@
     "video-game",
     "book"
   ],
-
   "name": [
     "celebrity",
     "historical",
@@ -81,19 +72,14 @@
     "tv-character",
     "game-character"
   ],
-
   "time": [
     "time",
     "year",
     "period"
   ],
-
   "event": [
     "historical",
     "natural disaster"
   ],
-
-  "uncategorized": [
-
-  ]
+  "uncategorized": []
 }

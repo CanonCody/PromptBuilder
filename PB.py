@@ -32,6 +32,9 @@ BUTTON_SELECTED_BG = "lightblue"       # Highlight color for selected buttons
 # Define a global variable for the template_entry widget and the number of prompts to generate
 template_entry = None
 num_prompts_to_generate = tk.IntVar()
+global types_text_editor
+edit_types_window = None
+
 
 #Startup
 
@@ -220,22 +223,23 @@ def show_category_words(event, category):
 #JSON Editor
 
 def load_selected_category(event):
-    # Get the selected item's index in the listbox
-    selected_index = category_listbox.curselection()
-    
-    # Check if an item is selected
-    if selected_index:
-        # Get the selected category from the listbox
-        selected_category = category_listbox.get(selected_index)
-        
-        # Clear the text editor
-        json_text_editor.delete("1.0", tk.END)
-        
+    # Get the selected item in the Treeview
+    selected_item = category_treeview.focus()
+
+    # Check if the selected item has any children (is a parent)
+    if not category_treeview.get_children(selected_item):
+        # Get the category name
+        category = category_treeview.item(selected_item, 'text')
+
         # Load words for the selected category
-        words = load_words(selected_category)
-        
-        # Display the words in the text editor
+        words = load_words(category)
+
+        # Display the words in the Text widget as JSON
+        json_text_editor.delete("1.0", tk.END)
         json_text_editor.insert(tk.END, json.dumps(words, indent=2))
+    else:
+        # Clear the JSON editor if a parent (category type) is selected
+        json_text_editor.delete("1.0", tk.END)
 
 def save_edited_json():
     # Get the selected category from the listbox
@@ -260,6 +264,62 @@ def save_edited_json():
     except json.JSONDecodeError:
         # Show an error message if the content is not valid JSON
         messagebox.showerror("Error", "Invalid JSON format.")
+
+def open_edit_types_window():
+    """Open a new window to edit the category types."""
+    global edit_types_window, types_text_editor # Access the global variable
+    # Create a new window to edit category types
+    edit_types_window = tk.Toplevel(root)
+    edit_types_window.title("Edit Category Types")
+
+    # Create the Text widget for editing category types
+    types_text_editor = tk.Text(edit_types_window, wrap=tk.NONE)
+    types_text_editor.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+    
+    # Load category types
+    category_types = load_category_types()
+    
+    # Display the category types in the Text widget as JSON
+    types_text_editor.delete("1.0", tk.END)
+    types_text_editor.insert(tk.END, json.dumps(category_types, indent=2))
+
+    # Create a "Save Changes" button to save the edited category types
+    save_button = tk.Button(edit_types_window, text="Save Changes", command=save_edited_types)
+    save_button.pack()
+
+def save_edited_types():
+    global edit_types_window, category_treeview, types_text_editor  # Access the global variables
+    # Get the edited content from the Text widget
+    edited_content = types_text_editor.get("1.0", tk.END).strip()
+    
+    # Build the file path using the JSON_DIR constant
+    file_path = os.path.join(JSON_DIR, 'category_types.json')  # Define the path to category_types.json
+    
+    try:
+        # Parse the edited content as JSON
+        category_types = json.loads(edited_content)
+        
+        # Save the edited content to the JSON file
+        with open(file_path, 'w') as file:
+            json.dump(category_types, file, indent=2)
+        
+        # Show a success message
+        tk.messagebox.showinfo("Success", "Changes saved successfully.")
+        
+        # Close the edit types window
+        edit_types_window.destroy()
+        
+        # Update the category treeview
+        category_treeview.delete(*category_treeview.get_children())  # Clear the treeview
+        for category_type, categories in category_types.items():
+            # Insert the category type as a parent node
+            category_type_id = category_treeview.insert("", "end", text=category_type)
+            for category in categories:
+                # Insert the category as a child node of the category type
+                category_treeview.insert(category_type_id, "end", text=category)
+    except json.JSONDecodeError:
+        # Show an error message if the content is not valid JSON
+        tk.messagebox.showerror("Error", "Invalid JSON format.")
 
 #Template
 
@@ -394,21 +454,28 @@ def create_dictionary_tab(tab_parent):
     tab_dictionary = ttk.Frame(tab_parent)
     tab_parent.add(tab_dictionary, text="Dictionary")
     
-    # Create a Listbox to display the list of categories
-    global category_listbox
-    category_listbox = tk.Listbox(tab_dictionary)
-    category_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    # Create a Treeview to display the list of categories
+    global category_treeview
+    category_treeview = ttk.Treeview(tab_dictionary)
+    category_treeview.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
     
     # Bind the selection event to load the selected category
-    category_listbox.bind('<<ListboxSelect>>', load_selected_category)
+    category_treeview.bind('<<TreeviewSelect>>', load_selected_category)
     
     # Load category types
     category_types = load_category_types()
     
-    # Populate the Listbox with the category names
+    # Populate the Treeview with the category types and categories
     for category_type, categories in category_types.items():
+        # Insert the category type as a parent node
+        category_type_id = category_treeview.insert("", "end", text=category_type)
         for category in categories:
-            category_listbox.insert(tk.END, category)
+            # Insert the category as a child node of the category type
+            category_treeview.insert(category_type_id, "end", text=category)
+
+    # Create an "Edit Types" button to open the edit types window
+    edit_types_button = tk.Button(tab_dictionary, text="Edit Types", command=open_edit_types_window)
+    edit_types_button.pack()
     
     # Create a Text widget to serve as a JSON editor
     global json_text_editor
@@ -444,6 +511,7 @@ generate_button.pack(pady=10)
 # Create a new button "Generate AI" on the "Generate" tab
 generate_ai_button = tk.Button(tab_main, text="Generate (GPT)", command=generate_prompt_gpt)
 generate_ai_button.pack(pady=10)
+
 
 # Create a label and entry to input the number of prompts to generate
 num_prompts_label = tk.Label(tab_main, text="Number of prompts to generate:")
