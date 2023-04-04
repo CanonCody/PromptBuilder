@@ -114,8 +114,8 @@ def build_prompt(template):
             selected_word = random.choice(words) if words else ''
             template = template.replace(f'[{category_type}]', selected_word, 1)
 
-    # Find placeholders with combined categories
-    combined_category_placeholders = re.findall(r'\[([\w/]+)\]', template)
+    # Update the regular expression pattern to include hyphens
+    combined_category_placeholders = re.findall(r'\[([\w/-]+)\]', template)
 
     for combined_categories in combined_category_placeholders:
         # Split combined categories into a list
@@ -276,6 +276,9 @@ def update_history_tab():
     # Update the ListBox with the new history items
     for template in template_history:
         history_listbox.insert(tk.END, template)
+
+# Print the keys (category types) of the CATEGORIES_BY_TYPE dictionary
+print(CATEGORIES_BY_TYPE.keys())
 
 #JSON Editor
 
@@ -608,7 +611,7 @@ def auto_generate_template():
     explanation_text = '\n'.join([f"{key}: {value}" for key, value in category_types_explained.items()])
     messages = [
         {"role": "system", "content": "You are a helpful assistant. Your task is to create a template for generating text prompts. Use the following explanation of category types as reference:\n" + explanation_text},
-        {"role": "user", "content": f"Create a template based on the current input: {current_template}"}
+        {"role": "user", "content": f"Create a template that will be populated later from a list of words in that category for example you might generate something like this 'a [painting] of a [animal] [mood] at [landmark] during [time]' if my input was 'animals and famous places'. You can ONLY use categories from the reference, input: {current_template} reference of categories you are allowed to use and use '[]' not '{{}}'! Try to only respond with the template {category_types_explained}"}
     ]
 
     # Call the OpenAI Chat API

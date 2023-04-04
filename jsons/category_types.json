@@ -28,7 +28,8 @@
     "urban",
     "natural",
     "landmark",
-    "fantasy"
+    "fantasy",
+    "habitat"
   ],
   "describer": [
     "color",
@@ -37,7 +38,8 @@
     "quanitity",
     "quality",
     "opinion",
-    "emotion"
+    "emotion",
+    "feature"
   ],
   "medium": [
     "medium",
@@ -56,7 +58,8 @@
     "action",
     "mental",
     "communication",
-    "motion"
+    "motion",
+    "behavior"
   ],
   "media": [
     "movie",
@@ -81,7 +84,10 @@
   ],
   "event": [
     "historical",
-    "natural disaster"
+    "natural disaster",
+    "weather"
   ],
-  "uncategorized": []
+  "uncategorized": [
+    "ability"
+  ]
 }
