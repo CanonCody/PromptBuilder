@@ -1,0 +1,64 @@
+{
+  "locations": [
+    "city = name of city (New York City)",
+    "country = name of country (France)",
+    "urban = area you would find in urban setting (downtown area)",
+    "natural = area you would find in nature (rainforest)",
+    "landmark = famous landmarks (Eiffel Tower)",
+    "fantasy = fictional location (Hogwarts)"
+  ],
+  "describer": [
+    "color = a color (red)",
+    "texture = a texture (smooth)",
+    "shape = a shape (circular)",
+    "quantity = a quantity (many)",
+    "quality = a quality (excellent)",
+    "opinion = an opinion (beautiful)",
+    "emotion = an emotion (happy)"
+  ],
+  "medium": [
+    "medium = a type of artistic medium (photo/painting)",
+    "painting = a painting (oil painting)",
+    "photo = a photograph (portrait photo)"
+  ],
+  "artistic": [
+    "style = an artistic style (impressionism)",
+    "genre = an artistic genre (horror)",
+    "theme = an artistic theme (Coming of Age)",
+    "mood = an artistic mood (serene)",
+    "perspective = an artistic perspective (bird's-eye view)",
+    "lighting = an artistic lighting (soft)"
+  ],
+  "verb": [
+    "action = a physical action (running)",
+    "mental = a mental action (thinking)",
+    "communication = a communication action (speaking)",
+    "motion = a motion action (swimming)"
+  ],
+  "media": [
+    "movie = a movie (Inception)",
+    "tv-show = a television show (Breaking Bad)",
+    "anime = an anime (Naruto)",
+    "video-game = a video game (Super Mario Bros.)",
+    "book = a book (Harry Potter and the Sorcerer's Stone)"
+  ],
+  "name": [
+    "celebrity = a celebrity (Beyoncé)",
+    "historical = a historical figure (Albert Einstein)",
+    "comic-character = a comic book character (Spider-Man)",
+    "disney-character = a Disney character (Mickey Mouse)",
+    "movies-character = a movie character (Darth Vader)",
+    "tv-character = a television character (Sheldon Cooper)",
+    "game-character = a video game character (Lara Croft)"
+  ],
+  "time": [
+    "time = a specific time (morning)",
+    "year = a specific year (1980's')",
+    "period = a time period (Middle Ages)"
+  ],
+  "event": [
+    "historical = a historical event (World War II)",
+    "natural disaster = a natural disaster (earthquake)"
+  ],
+  "uncategorized": []
+}

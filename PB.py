@@ -18,7 +18,7 @@ root = tk.Tk()
 root.title("Prompt Generator")
 
 # Define the name of the subdirectory where JSON files are stored
-JSON_DIR = "categories"
+JSON_DIR = "jsons"
 
 # Initialize CATEGORIES_BY_TYPE as a dictionary with default empty lists
 CATEGORIES_BY_TYPE = {}
@@ -29,11 +29,26 @@ selected_categories = []
 BUTTON_NORMAL_BG = "SystemButtonFace"  # Default button background color
 BUTTON_SELECTED_BG = "lightblue"       # Highlight color for selected buttons
 
+# Define a constant for the JSON file path that will store the history
+HISTORY_JSON_FILE = 'template_history.json'
+
+# Define a global variable for the history tab and template history
+history_tab = None
+template_history = []
+
+# Define global variables for the search_entry, search_button, and history_listbox
+search_entry = None
+search_button = None
+history_listbox = None
+
 # Define a global variable for the template_entry widget and the number of prompts to generate
 template_entry = None
 num_prompts_to_generate = tk.IntVar()
 global types_text_editor
 edit_types_window = None
+
+# Define a global variable for the number of prompts to generate and set its initial value to 1
+num_prompts_to_generate = tk.IntVar(value=1)
 
 
 #Startup
@@ -73,6 +88,20 @@ def load_category_types():
         print(f'Error: Unable to load category types. Invalid JSON. {e}')
     return {'uncategorized': [], 'nouns': []}
 
+def load_category_types_explained():
+    # Define the path to the JSON file that contains the category types explanation
+    json_file = "category_types_explained.json"
+    if os.path.exists(json_file):
+        with open(json_file, 'r', encoding='utf-8') as file:
+            return json.load(file)
+    return {}
+
+def load_history_from_json():
+    if os.path.exists(HISTORY_JSON_FILE):
+        with open(HISTORY_JSON_FILE, 'r') as file:
+            return json.load(file)
+    return []
+
 #Prompt Creation
 
 def build_prompt(template):
@@ -103,25 +132,36 @@ def build_prompt(template):
     return template
 
 def generate_prompt():
-    """Generate a prompt using the user-defined template and display it."""
-    global template_entry  # Access the global variable
+    """Generate prompts using the user-defined template and display them."""
+    global template_entry, template_history  # Access the global variables
+
     # Get the template from the template_entry widget
-    template = template_entry.get("1.0", tk.END)[:-1]  # Remove the trailing newline character
+    template = template_entry.get("1.0", tk.END).strip()  # Remove the trailing newline character
+
+    # Add the used template to the template history, only if it doesn't already exist there
+    if template not in template_history:
+        template_history.append(template)
+        # Update the History tab
+        update_history_tab()
+        # Save the history to the JSON file
+        save_history_to_json()
+
+    # Clear previously generated prompts
+    clear_generated_prompts()
 
     # Get the number of prompts to generate
     num_prompts = num_prompts_to_generate.get()
 
-    # Initialize a list to store the generated prompts
-    generated_prompts = []
-
     # Generate the specified number of prompts
     for _ in range(num_prompts):
-        # Build and append the prompt to the list
+        # Build and display the prompt
         prompt = build_prompt(template)
-        generated_prompts.append(prompt)
-
-    # Display the generated prompts
-    prompt_label.config(text="\n".join(generated_prompts))
+        prompt_label = tk.Label(tab_main, text=prompt, wraplength=600, font=("Helvetica", 12))
+        prompt_label.pack(pady=10)
+        # Bind the left mouse button click event to the copy_to_clipboard function for the prompt label
+        prompt_label.bind('<Button-1>', lambda event, text=prompt: copy_to_clipboard(event, text))
+        # Append the label to the list of generated labels
+        generated_prompt_labels.append(prompt_label)
 
 def generate_prompt_gpt():
     """Generate a prompt using the GPT API and the user-defined template."""
@@ -168,24 +208,28 @@ def generate_prompt_gpt():
     # Display the generated prompts
     prompt_label.config(text="\n".join(generated_prompts))
 
+def clear_generated_prompts():
+    """Clear all previously generated prompt labels."""
+    for label in generated_prompt_labels:
+        label.pack_forget()  # Remove the label from the UI
+    generated_prompt_labels.clear()  # Clear the list of labels
+
 #Utility
 
-def copy_to_clipboard(event):
+def copy_to_clipboard(event, prompt_text):
     """Copy the prompt text to the clipboard and provide a visual indication."""
-    # Get the text from the prompt_label
-    prompt_text = prompt_label.cget('text')
     # Clear the clipboard and set its content to the prompt text
     root.clipboard_clear()
     root.clipboard_append(prompt_text)
-        
+
     # Get the current text color (foreground color) of the prompt_label
-    original_fg = prompt_label.cget('fg')
-        
+    original_fg = event.widget.cget('fg')
+
     # Change the text color to blue to indicate copying
-    prompt_label.config(fg='blue')
-        
+    event.widget.config(fg='blue')
+
     # Restore the original text color after a short delay (e.g., 100 ms)
-    prompt_label.after(100, lambda: prompt_label.config(fg=original_fg))
+    event.widget.after(100, lambda: event.widget.config(fg=original_fg))
 
 def show_category_words(event, category):
     """Open a new window to display all the words in the selected category."""
@@ -219,6 +263,19 @@ def show_category_words(event, category):
 
     # Update the width of the words_window to the calculated width
     words_window.geometry(f"{words_window_width}x{words_window.winfo_reqheight()}")
+
+def save_history_to_json():
+    with open(HISTORY_JSON_FILE, 'w') as file:
+        json.dump(template_history, file, indent=2)
+
+def update_history_tab():
+    """Update the History tab based on the updated template history."""
+    global history_listbox  # Access the global variable
+    # Clear the ListBox
+    history_listbox.delete(0, tk.END)
+    # Update the ListBox with the new history items
+    for template in template_history:
+        history_listbox.insert(tk.END, template)
 
 #JSON Editor
 
@@ -469,7 +526,6 @@ def ai_suggest_category():
             print("Error:", e)
             messagebox.showerror("Error", "Failed to suggest words using AI.")
 
-
 #Template
 
 def clear_template_input():
@@ -541,6 +597,41 @@ def confirm_combine_categories(entry, category_buttons):
 def category_button_click(category, button, entry):
     insert_into_template(category, entry, is_category=True, button=button)
 
+def auto_generate_template():
+    # Load category types explanation from the JSON file
+    category_types_explained = load_category_types_explained()
+    
+    # Get the current content of the template input box
+    current_template = template_entry.get("1.0", tk.END).strip()
+    
+    # Prepare the conversation messages
+    explanation_text = '\n'.join([f"{key}: {value}" for key, value in category_types_explained.items()])
+    messages = [
+        {"role": "system", "content": "You are a helpful assistant. Your task is to create a template for generating text prompts. Use the following explanation of category types as reference:\n" + explanation_text},
+        {"role": "user", "content": f"Create a template based on the current input: {current_template}"}
+    ]
+
+    # Call the OpenAI Chat API
+    try:
+        # Set the OpenAI API key
+        openai.api_key = os.environ.get("OPENAI_API_KEY")
+
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=messages
+        )
+
+        # Extract the assistant's response
+        generated_template = response['choices'][0]['message']['content'].strip()
+
+        # Replace the content of the template input box with the generated template
+        template_entry.delete("1.0", tk.END)
+        template_entry.insert(tk.END, generated_template)
+    except Exception as e:
+        print(f"Error: {e}")
+        template_entry.delete("1.0", tk.END)
+        template_entry.insert(tk.END, "Failed to generate template.")
+
 #Tabs
 
 def create_template_builder(tab_parent):
@@ -598,6 +689,10 @@ def create_template_builder(tab_parent):
     clear_button = tk.Button(tab_template_builder, text="Clear", command=clear_template_input)
     clear_button.grid(row=0, column=max(1, total_categories), padx=10, pady=10)
 
+    # Create a new button "Auto Generate" in the Template Builder tab
+    auto_generate_button = tk.Button(tab_template_builder, text="Auto Generate", command=auto_generate_template)
+    auto_generate_button.grid(row=0, column=max(1, total_categories) + 1, padx=10, pady=10)
+
 def create_dictionary_tab(tab_parent):
     # Create a new tab for the Dictionary
     tab_dictionary = ttk.Frame(tab_parent)
@@ -650,9 +745,48 @@ def create_dictionary_tab(tab_parent):
     save_button = tk.Button(tab_dictionary, text="Save Changes", command=save_edited_json)
     save_button.pack()
 
+def create_history_tab(tab_parent):
+    """Create the History tab."""
+    global history_tab, search_entry, search_button, history_listbox  # Access the global variables
+    # Create a new tab for the History
+    history_tab = ttk.Frame(tab_parent)
+    tab_parent.add(history_tab, text="History")
+
+    # Create the search entry
+    search_entry = tk.Entry(history_tab)
+    search_entry.pack(pady=5)
+
+    # Create the search button
+    search_button = tk.Button(history_tab, text="Search", command=lambda: search_history(search_entry.get()))
+    search_button.pack(pady=5)
+
+    # Create a ListBox to display the search results
+    history_listbox = tk.Listbox(history_tab)
+    history_listbox.pack(fill=tk.BOTH, expand=True)
+
+    # Populate the ListBox with the initial history items
+    for template in template_history:
+        history_listbox.insert(tk.END, template)
+
+    def search_history(search_term):
+        """Search the history and update the ListBox with the results."""
+        # Clear the ListBox
+        history_listbox.delete(0, tk.END)
+        # Filter the history based on the search term
+        search_results = [template for template in template_history if search_term.lower() in template.lower()]
+        # Update the ListBox with the filtered results
+        for template in search_results:
+            history_listbox.insert(tk.END, template)
+
 
 # Initialize tkinter variables after the root window is created
 combine_categories = tk.BooleanVar()
+
+# Initialize a list to store the labels for the generated prompts
+generated_prompt_labels = []
+
+# Load the history from the JSON file
+template_history = load_history_from_json()
 
 # Create a notebook (tab container)
 tab_parent = ttk.Notebook(root)
@@ -662,14 +796,7 @@ tab_parent.pack(expand=1, fill='both')
 tab_main = ttk.Frame(tab_parent)
 tab_parent.add(tab_main, text="Generate")
 
-# Create a label to display the generated prompt
-prompt_label = tk.Label(tab_main, text="", wraplength=300, font=("Helvetica", 12))
-prompt_label.pack(pady=10)
-
-# Bind the left mouse button click event to the copy_to_clipboard function
-prompt_label.bind('<Button-1>', copy_to_clipboard)
-
-# Create a button to generate prompts
+# Create a button to generate prompts (JSON)
 generate_button = tk.Button(tab_main, text="Generate (JSON)", command=generate_prompt)
 generate_button.pack(pady=10)
 
@@ -677,19 +804,20 @@ generate_button.pack(pady=10)
 generate_ai_button = tk.Button(tab_main, text="Generate (GPT)", command=generate_prompt_gpt)
 generate_ai_button.pack(pady=10)
 
-
 # Create a label and entry to input the number of prompts to generate
 num_prompts_label = tk.Label(tab_main, text="Number of prompts to generate:")
 num_prompts_label.pack()
 num_prompts_entry = tk.Entry(tab_main, textvariable=num_prompts_to_generate)
 num_prompts_entry.pack()
 
-
 # Create the Template Builder tab
 create_template_builder(tab_parent)
 
 # Create the "Dictionary" tab
 create_dictionary_tab(tab_parent)
+
+# Create the History tab
+create_history_tab(tab_parent)  # Added this line to create the History tab
 
 # Run the application
 root.mainloop()
