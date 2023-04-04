@@ -242,28 +242,33 @@ def load_selected_category(event):
         json_text_editor.delete("1.0", tk.END)
 
 def save_edited_json():
-    # Get the selected category from the listbox
-    selected_category = category_listbox.get(category_listbox.curselection())
-    
-    # Get the edited content from the text editor
-    edited_content = json_text_editor.get("1.0", tk.END).strip()
-    
-    # Build the file path using the JSON_DIR constant
-    file_path = os.path.join(JSON_DIR, f'{selected_category}.json')
-    
-    try:
-        # Parse the edited content as JSON
-        words = json.loads(edited_content)
-        
-        # Save the edited content to the JSON file
-        with open(file_path, 'w') as file:
-            json.dump(words, file, indent=2)
-        
-        # Show a success message
-        messagebox.showinfo("Success", "Changes saved successfully.")
-    except json.JSONDecodeError:
-        # Show an error message if the content is not valid JSON
-        messagebox.showerror("Error", "Invalid JSON format.")
+    # Get the selected item in the Treeview
+    selected_item = category_treeview.focus()
+
+    # Check if the selected item has any children (is a parent)
+    if not category_treeview.get_children(selected_item):
+        # Get the category name
+        selected_category = category_treeview.item(selected_item, 'text')
+
+        # Get the edited content from the text editor
+        edited_content = json_text_editor.get("1.0", tk.END).strip()
+
+        # Build the file path using the JSON_DIR constant
+        file_path = os.path.join(JSON_DIR, f'{selected_category}.json')
+
+        try:
+            # Parse the edited content as JSON
+            words = json.loads(edited_content)
+
+            # Save the edited content to the JSON file
+            with open(file_path, 'w') as file:
+                json.dump(words, file, indent=2)
+
+            # The success message popup has been removed
+
+        except json.JSONDecodeError:
+            # Show an error message if the content is not valid JSON
+            messagebox.showerror("Error", "Invalid JSON format.")
 
 def open_edit_types_window():
     """Open a new window to edit the category types."""
@@ -287,39 +292,32 @@ def open_edit_types_window():
     save_button = tk.Button(edit_types_window, text="Save Changes", command=save_edited_types)
     save_button.pack()
 
-def save_edited_types():
-    global edit_types_window, category_treeview, types_text_editor  # Access the global variables
-    # Get the edited content from the Text widget
-    edited_content = types_text_editor.get("1.0", tk.END).strip()
-    
-    # Build the file path using the JSON_DIR constant
-    file_path = os.path.join(JSON_DIR, 'category_types.json')  # Define the path to category_types.json
-    
-    try:
-        # Parse the edited content as JSON
-        category_types = json.loads(edited_content)
-        
-        # Save the edited content to the JSON file
-        with open(file_path, 'w') as file:
-            json.dump(category_types, file, indent=2)
-        
-        # Show a success message
-        tk.messagebox.showinfo("Success", "Changes saved successfully.")
-        
-        # Close the edit types window
-        edit_types_window.destroy()
-        
-        # Update the category treeview
-        category_treeview.delete(*category_treeview.get_children())  # Clear the treeview
-        for category_type, categories in category_types.items():
-            # Insert the category type as a parent node
-            category_type_id = category_treeview.insert("", "end", text=category_type)
-            for category in categories:
-                # Insert the category as a child node of the category type
-                category_treeview.insert(category_type_id, "end", text=category)
-    except json.JSONDecodeError:
-        # Show an error message if the content is not valid JSON
-        tk.messagebox.showerror("Error", "Invalid JSON format.")
+def save_edited_json():
+    # Get the selected item in the Treeview
+    selected_item = category_treeview.focus()
+    # Check if the selected item has any children (is a parent)
+    if not category_treeview.get_children(selected_item):
+        # Get the category name
+        selected_category = category_treeview.item(selected_item, 'text')
+        # Get the edited content from the text editor
+        edited_content = json_text_editor.get("1.0", tk.END).strip()
+        # Build the file path using the JSON_DIR constant
+        file_path = os.path.join(JSON_DIR, f'{selected_category}.json')
+        try:
+            # Parse the edited content as JSON
+            words = json.loads(edited_content)
+            # Save the edited content to the JSON file
+            with open(file_path, 'w') as file:
+                json.dump(words, file, indent=2)
+
+            # Remove the "highlight" tag after saving the changes
+            json_text_editor.tag_remove("highlight", "1.0", tk.END)
+        except json.JSONDecodeError:
+            # Show an error message if the content is not valid JSON
+            messagebox.showerror("Error", "Invalid JSON format.")
+
+    # Define the highlight tag for the Text widget (JSON editor)
+    json_text_editor.tag_configure("highlight", background="yellow")
 
 def create_empty_json_files():
     """Create empty JSON files for categories that do not have corresponding JSON files."""
@@ -334,6 +332,100 @@ def create_empty_json_files():
                 with open(file_path, 'w') as file:
                     json.dump([], file, indent=2)
                 print(f'Created empty JSON file for category "{category}".')
+
+def ai_populate_category():
+    """Use GPT to populate the selected category with new words."""
+    # Get the selected category from the Treeview
+    selected_item = category_treeview.focus()
+    if not category_treeview.get_children(selected_item):
+        # Get the category name
+        category = category_treeview.item(selected_item, 'text')
+        # Load words for the selected category
+        current_words = load_words(category)
+        # Prepare the conversation messages
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant. Your task is to suggest additional words that match the specified category. Do not suggest any words that are already on the list. Respond with each suggested word in quotes."},
+            {"role": "user", "content": f"Category: {category}. Current list: {current_words}. Suggest some additional words that match the category and are not already on the list."}
+        ]
+        try:
+            # Set the OpenAI API key
+            openai.api_key = os.environ.get("OPENAI_API_KEY")
+            # Call the OpenAI Chat API
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=messages
+            )
+            # Extract the assistant's response
+            ai_response = response['choices'][0]['message']['content']
+            # Debug information: Print the AI response to the console
+            print("AI Response:", ai_response)
+            # Use regular expressions to extract the list of suggested words from the response
+            suggested_words = re.findall(r'"(\w+)"', ai_response)
+            # Filter out words that are already in the current list
+            new_words = [word for word in suggested_words if word not in current_words]
+            # Debug information: Print the new words to the console
+            print("New Words:", new_words)
+            if new_words:
+                # Append the new words to the current list
+                current_words.extend(new_words)
+                # Convert the updated list of words to JSON format
+                updated_words_json = json.dumps(current_words, indent=2)
+                # Display the updated list of words in the JSON editor
+                json_text_editor.delete("1.0", tk.END)
+                json_text_editor.insert(tk.END, updated_words_json)
+                # Apply the "highlight" tag to the newly added words
+                start_index = json_text_editor.search(json.dumps(new_words[0]), "1.0", tk.END)
+                end_index = json_text_editor.index(tk.END)
+                json_text_editor.tag_add("highlight", start_index, end_index)
+        except Exception as e:
+            # Debug information: Print the error message to the console
+            print("Error:", e)
+            messagebox.showerror("Error", "Failed to populate category using AI.")
+
+
+
+def ai_suggest_category():
+    """Use GPT to suggest words to add to the selected category."""
+    # Get the selected category from the Treeview
+    selected_item = category_treeview.focus()
+    if not category_treeview.get_children(selected_item):
+        # Get the category name
+        category = category_treeview.item(selected_item, 'text')
+        # Load words for the selected category
+        words = load_words(category)
+        # Prepare the conversation messages
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant. Your task is to suggest additional words that match the specified category. Do not suggest any words that are already on the list."},
+            {"role": "user", "content": f"Category: {category}. Current list: {words}. Suggest some additional words that match the category and are not already on the list."}
+        ]
+        try:
+            # Set the OpenAI API key
+            openai.api_key = os.environ.get("OPENAI_API_KEY")
+            # Call the OpenAI Chat API
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=messages
+            )
+            # Extract the assistant's response
+            ai_response = response['choices'][0]['message']['content']
+            # Print the AI response to the console for debugging
+            print("AI Response:", ai_response)
+            # Use regular expressions to extract the list of suggested words from the response
+            suggested_words = re.findall(r'- (\w+)', ai_response)
+            # Convert the list of suggested words to JSON format
+            suggested_words_json = json.dumps(suggested_words, indent=2)
+            # Create a popup to display the suggested words in JSON format
+            suggest_window = tk.Toplevel(root)
+            suggest_window.title("AI Suggested Words")
+            suggest_text = tk.scrolledtext.ScrolledText(suggest_window, wrap=tk.WORD, font=("Helvetica", 12))
+            suggest_text.insert(tk.END, suggested_words_json)
+            suggest_text.pack(pady=10)
+            # Set the ScrolledText widget to read-only mode
+            suggest_text.configure(state='disabled')
+        except Exception as e:
+            # Print the error message to the console for debugging
+            print("Error:", e)
+            messagebox.showerror("Error", "Failed to suggest words using AI.")
 
 #Template
 
@@ -494,15 +586,27 @@ def create_dictionary_tab(tab_parent):
     # Create a button to create empty JSON files for categories
     create_empty_json_button = tk.Button(tab_dictionary, text="Create Empty JSON Files", command=create_empty_json_files)
     create_empty_json_button.pack()
-    
+
     # Create a Text widget to serve as a JSON editor
     global json_text_editor
     json_text_editor = tk.Text(tab_dictionary, wrap=tk.NONE)
     json_text_editor.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
-    
+
+    # Define the highlight tag for the Text widget (JSON editor)
+    json_text_editor.tag_configure("highlight", background="yellow")
+
+    # Create an "AI Populate" button to populate the selected category using GPT
+    ai_populate_button = tk.Button(tab_dictionary, text="AI Populate", command=ai_populate_category)
+    ai_populate_button.pack()
+
+    # Add the "AI Suggest" button that triggers the ai_suggest_category function
+    ai_suggest_button = tk.Button(tab_dictionary, text="AI Suggest", command=ai_suggest_category)
+    ai_suggest_button.pack()
+
     # Create a button to save the edited JSON content
     save_button = tk.Button(tab_dictionary, text="Save Changes", command=save_edited_json)
     save_button.pack()
+
 
 # Initialize tkinter variables after the root window is created
 combine_categories = tk.BooleanVar()
@@ -536,6 +640,7 @@ num_prompts_label = tk.Label(tab_main, text="Number of prompts to generate:")
 num_prompts_label.pack()
 num_prompts_entry = tk.Entry(tab_main, textvariable=num_prompts_to_generate)
 num_prompts_entry.pack()
+
 
 # Create the Template Builder tab
 create_template_builder(tab_parent)
