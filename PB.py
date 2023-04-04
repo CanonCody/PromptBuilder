@@ -292,6 +292,42 @@ def open_edit_types_window():
     save_button = tk.Button(edit_types_window, text="Save Changes", command=save_edited_types)
     save_button.pack()
 
+def save_edited_types():
+    """Save the edited category types to the JSON file."""
+    global types_text_editor, JSON_DIR, edit_types_window  # Access the global variables
+    # Get the edited content from the text editor
+    edited_content = types_text_editor.get("1.0", tk.END).strip()
+    # Build the file path
+    file_path = os.path.join(JSON_DIR, 'category_types.json')
+    try:
+        # Parse the edited content as JSON
+        category_types = json.loads(edited_content)
+        # Save the edited content to the JSON file
+        with open(file_path, 'w') as file:
+            json.dump(category_types, file, indent=2)
+        # Close the editor window after saving changes
+        edit_types_window.destroy()
+        # Refresh the category Treeview to reflect the updated category types
+        refresh_category_treeview()
+    except json.JSONDecodeError:
+        # Show an error message if the content is not valid JSON
+        messagebox.showerror("Error", "Invalid JSON format.")
+
+def refresh_category_treeview():
+    """Refresh the category Treeview based on the updated JSON file."""
+    global category_treeview
+    # Clear all items from the Treeview
+    category_treeview.delete(*category_treeview.get_children())
+    # Load the updated category types from the JSON file
+    category_types = load_category_types()
+    # Populate the Treeview with the updated category types and categories
+    for category_type, categories in category_types.items():
+        # Insert the category type as a parent node
+        category_type_id = category_treeview.insert("", "end", text=category_type)
+        for category in categories:
+            # Insert the category as a child node of the category type
+            category_treeview.insert(category_type_id, "end", text=category)
+
 def save_edited_json():
     # Get the selected item in the Treeview
     selected_item = category_treeview.focus()
@@ -387,7 +423,6 @@ def ai_populate_category():
             # Debug information: Print the error message to the console
             print("Error:", e)
             messagebox.showerror("Error", "Failed to populate category using AI.")
-
 
 def ai_suggest_category():
     """Use GPT to suggest words to add to the selected category."""
